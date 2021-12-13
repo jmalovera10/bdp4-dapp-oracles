@@ -1,0 +1,41 @@
+{
+  "autorun": true,
+  "autokill": true,
+  "terminals": [
+    {
+      "name": "truffle",
+      "description": "A terminal that runs truffle",
+      "icon": "code",
+      "cwd": "project/",
+      "commands": ["nvm use 10.17.0", "truffle development"],
+      "recycle": false,
+      "open": true
+    },
+    {
+      "name": "backend",
+      "description": "A terminal that runs the backend",
+      "icon": "code",
+      "cwd": "project/",
+      "commands": ["nvm use 10.17.0", "npm run server"],
+      "recycle": false,
+      "open": true
+    },
+    {
+      "name": "frontend",
+      "description": "A terminal that runs the frontend",
+      "icon": "code",
+      "cwd": "project/",
+      "commands": ["nvm use 10.17.0", "npm run dapp"],
+      "recycle": false,
+      "open": true
+    },
+    {
+      "name": "git",
+      "description": "A terminal that runs git",
+      "icon": "code",
+      "cwd": "project/",
+      "recycle": false,
+      "open": true
+    }
+  ]
+}
