@@ -1,10 +1,4 @@
-pragma solidity ^0.4.25;
-
-// It's important to avoid vulnerabilities due to numeric overflow bugs
-// OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
-// More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
-
-import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+pragma solidity ^0.8.10;
 
 import "./FlightSuretyData.sol";
 
@@ -12,8 +6,6 @@ import "./FlightSuretyData.sol";
 /* FlightSurety Smart Contract                      */
 /************************************************** */
 contract FlightSuretyApp {
-    using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to "prototype" in Javascript)
-
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
@@ -104,9 +96,9 @@ contract FlightSuretyApp {
      * @dev Contract constructor
      *
      */
-    constructor(address dataContract) public {
+    constructor(address dataContract) {
         contractOwner = msg.sender;
-        flightSuretyData = FlightSuretyData(dataContract);
+        flightSuretyData = FlightSuretyData(payable(dataContract));
     }
 
     /********************************************************************************************/
@@ -150,12 +142,7 @@ contract FlightSuretyApp {
         }
     }
 
-    function fundAirline()
-        external
-        payable
-        requireRegisteredAirline
-        returns (bool)
-    {
+    function fundAirline() external payable requireRegisteredAirline {
         require(
             msg.value == AIRLINE_FUNDING_FEE,
             "The funding fee must be exactly 1 ether"
@@ -164,14 +151,14 @@ contract FlightSuretyApp {
             !flightSuretyData.isAirlineAllowedToVote(msg.sender),
             "Airline is already funded"
         );
-        flightSuretyData.fund.value(msg.value)(msg.sender);
+        flightSuretyData.fund{value: msg.value}(msg.sender);
     }
 
     /**
      * @dev Register a future flight for insuring.
      *
      */
-    function registerFlight(string flight, uint256 timestamp)
+    function registerFlight(string calldata flight, uint256 timestamp)
         external
         requireRegisteredAirline
         requireAirlineAllowedToVote
@@ -188,7 +175,7 @@ contract FlightSuretyApp {
     // Insurance functions
     function buyInsurance(
         address airline,
-        string flight,
+        string calldata flight,
         uint256 timestamp
     ) external payable {
         require(
@@ -196,7 +183,7 @@ contract FlightSuretyApp {
             "Insurance fee exceeds maximum"
         );
 
-        flightSuretyData.buy.value(msg.value)(
+        flightSuretyData.buy{value: msg.value}(
             msg.sender,
             airline,
             flight,
@@ -210,7 +197,7 @@ contract FlightSuretyApp {
      */
     function processFlightStatus(
         address airline,
-        string memory flight,
+        string calldata flight,
         uint256 timestamp,
         uint8 statusCode
     ) internal {
@@ -227,7 +214,7 @@ contract FlightSuretyApp {
     // Generate a request for oracles to fetch flight information
     function fetchFlightStatus(
         address airline,
-        string flight,
+        string calldata flight,
         uint256 timestamp
     ) external {
         uint8 index = getRandomIndex(msg.sender);
@@ -236,10 +223,11 @@ contract FlightSuretyApp {
         bytes32 key = keccak256(
             abi.encodePacked(index, airline, flight, timestamp)
         );
-        oracleResponses[key] = ResponseInfo({
-            requester: msg.sender,
-            isOpen: true
-        });
+
+        ResponseInfo storage responseInfo = oracleResponses[key];
+
+        responseInfo.requester = msg.sender;
+        responseInfo.isOpen = true;
 
         emit OracleRequest(index, airline, flight, timestamp);
     }
@@ -311,13 +299,13 @@ contract FlightSuretyApp {
         oracles[msg.sender] = Oracle({isRegistered: true, indexes: indexes});
     }
 
-    function getMyIndexes() external view returns (uint8[3]) {
+    function getMyIndexes() external view returns (uint8[3] memory indexes) {
         require(
             oracles[msg.sender].isRegistered,
             "Not registered as an oracle"
         );
 
-        return oracles[msg.sender].indexes;
+        indexes = oracles[msg.sender].indexes;
     }
 
     // Called by oracle when a response is available to an outstanding request
@@ -327,7 +315,7 @@ contract FlightSuretyApp {
     function submitOracleResponse(
         uint8 index,
         address airline,
-        string flight,
+        string calldata flight,
         uint256 timestamp,
         uint8 statusCode
     ) external {
@@ -363,15 +351,17 @@ contract FlightSuretyApp {
 
     function getFlightKey(
         address airline,
-        string flight,
+        string calldata flight,
         uint256 timestamp
     ) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
 
     // Returns array of three non-duplicating integers from 0-9
-    function generateIndexes(address account) internal returns (uint8[3]) {
-        uint8[3] memory indexes;
+    function generateIndexes(address account)
+        internal
+        returns (uint8[3] memory indexes)
+    {
         indexes[0] = getRandomIndex(account);
 
         indexes[1] = indexes[0];
@@ -383,8 +373,6 @@ contract FlightSuretyApp {
         while ((indexes[2] == indexes[0]) || (indexes[2] == indexes[1])) {
             indexes[2] = getRandomIndex(account);
         }
-
-        return indexes;
     }
 
     // Returns array of three non-duplicating integers from 0-9

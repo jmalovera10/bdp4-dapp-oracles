@@ -9,13 +9,11 @@ web3.eth.defaultAccount = web3.eth.accounts[0];
 let flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
 const oracles = [];
 
-initializeOracles();
-
 async function initializeOracles() {
   await registerOracles();
   flightSuretyApp.events.OracleRequest({ fromBlock: 0 }, (error, event) => {
     if (error) return console.log(error);
-    if (!event.returnValues) return console.error("No returnValues");
+    if (!event.returnValues) return console.error("No return values");
 
     respondQuery(
       event.returnValues.index,
@@ -27,14 +25,25 @@ async function initializeOracles() {
 }
 
 async function registerOracles() {
-  const accounts = await web3.eth.accounts;
+  const accounts = await web3.eth.getAccounts();
   const NUMBER_OF_ORACLES = 50;
 
-  accounts.slice(1, NUMBER_OF_ORACLES + 1).forEach(async (account) => {
-    await flightSuretyApp.methods.registerOracle().send({ from: account, value: web3.utils.toWei("1", "ether") });
-    const indexes = await flightSuretyApp.methods.getMyIndexes().call({ from: address });
-    oracles.push({ account, indexes });
-  });
+  const accountsToUse = accounts.slice(1, NUMBER_OF_ORACLES + 1);
+
+  for (let i = 0; i < accountsToUse.length; i++) {
+    const account = accountsToUse[i];
+
+    try {
+      await flightSuretyApp.methods
+        .registerOracle()
+        .send({ from: account, value: web3.utils.toWei("1", "ether"), gas: 6721975 });
+
+      const indexes = await flightSuretyApp.methods.getMyIndexes().call({ from: account });
+      flightSuretyApp.oracles.push({ account, indexes });
+    } catch (e) {
+      console.log(e.message);
+    }
+  }
 
   console.log(`${oracles.length} Oracles Registered`);
 }
@@ -72,15 +81,7 @@ function generateRandomCode() {
   else return STATUS_CODE_LATE_OTHER;
 }
 
-flightSuretyApp.events.OracleRequest(
-  {
-    fromBlock: 0,
-  },
-  function (error, event) {
-    if (error) console.log(error);
-    console.log(event);
-  }
-);
+initializeOracles();
 
 const app = express();
 app.get("/api", (req, res) => {

@@ -1,10 +1,7 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.8.10;
 
-import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
-
+// Safemath is default feature for solidity 0.8.0 an later
 contract FlightSuretyData {
-    using SafeMath for uint256;
-
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
@@ -49,7 +46,7 @@ contract FlightSuretyData {
      * @dev Constructor
      *      The deploying account becomes contractOwner
      */
-    constructor(address airlineAddress) public {
+    constructor(address airlineAddress) {
         contractOwner = msg.sender;
         airlines[airlineAddress] = Airline({canVote: false, registered: true});
         airlinesCount++;
@@ -178,7 +175,7 @@ contract FlightSuretyData {
     function buy(
         address passengerAddress,
         address airline,
-        string flight,
+        string calldata flight,
         uint256 timestamp
     ) external payable requireFlightSuretyAppContract {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
@@ -187,7 +184,7 @@ contract FlightSuretyData {
             Insurance({
                 flightKey: flightKey,
                 value: msg.value,
-                payoutValue: msg.value.mul(3).div(2),
+                payoutValue: (msg.value * 3) / 2,
                 status: InsuranceStatus.Bought
             })
         );
@@ -224,7 +221,7 @@ contract FlightSuretyData {
             payoutValue = address(this).balance;
         }
 
-        passenger.transfer(payoutValue);
+        payable(passenger).transfer(payoutValue);
     }
 
     /**
@@ -252,7 +249,11 @@ contract FlightSuretyData {
      * @dev Fallback function for funding smart contract.
      *
      */
-    function() external payable {
+    fallback() external payable {
+        fund(msg.sender);
+    }
+
+    receive() external payable {
         fund(msg.sender);
     }
 }

@@ -12,6 +12,15 @@
       "open": true
     },
     {
+      "name": "ganache",
+      "description": "A terminal that runs ganache-cli",
+      "icon": "code",
+      "cwd": "project/",
+      "commands": ["nvm use 10.17.0", "ganache-cli"],
+      "recycle": false,
+      "open": true
+    },
+    {
       "name": "backend",
       "description": "A terminal that runs the backend",
       "icon": "code",
@@ -33,7 +42,6 @@
       "name": "git",
       "description": "A terminal that runs git",
       "icon": "code",
-      "cwd": "project/",
       "recycle": false,
       "open": true
     }
